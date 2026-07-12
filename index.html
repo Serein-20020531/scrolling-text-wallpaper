@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>自定义滚动文字壁纸</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Microsoft YaHei", "Noto Serif SC", serif;
+    }
+
+    body {
+      background: #a90000;
+    }
+
+    .wallpaper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background:
+        radial-gradient(
+          circle at 78% 45%,
+          rgba(220, 0, 0, 0.5),
+          transparent 45%
+        ),
+        linear-gradient(135deg, #8d0000, #b70000);
+    }
+
+    /* 文字滚动区域 */
+    .text-area {
+      position: absolute;
+      top: 0;
+      right: 2vw;
+      width: 50vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: space-around;
+      gap: 15px;
+      pointer-events: none;
+    }
+
+    .column {
+      height: 100%;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      white-space: nowrap;
+    }
+
+    .scrolling-text {
+      display: inline-block;
+      padding-top: 100vh;
+      color: rgba(255, 240, 230, 0.92);
+      font-weight: 700;
+      letter-spacing: 10px;
+      text-shadow: 0 0 18px rgba(255, 210, 190, 0.2);
+      animation-name: scrollUp;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    @keyframes scrollUp {
+      from {
+        transform: translateY(0);
+      }
+
+      to {
+        transform: translateY(-200%);
+      }
+    }
+
+    /* 设置面板 */
+    .settings {
+      position: fixed;
+      z-index: 10;
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      padding: 20px;
+      color: #fff;
+      background: rgba(25, 0, 0, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(12px);
+    }
+
+    .settings.hidden {
+      display: none;
+    }
+
+    .settings h2 {
+      margin: 0 0 16px;
+      font-size: 20px;
+    }
+
+    .settings label {
+      display: block;
+      margin-top: 13px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    textarea,
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      color: #222;
+      background: #fff;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+      font: inherit;
+    }
+
+    textarea {
+      height: 130px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .hint {
+      margin: 7px 0 0;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      flex: 1;
+      padding: 11px;
+      color: #fff;
+      background: #d52020;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover {
+      background: #ef3030;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .open-settings {
+      position: fixed;
+      z-index: 9;
+      top: 20px;
+      left: 20px;
+      padding: 10px 16px;
+      color: #fff;
+      background: rgba(30, 0, 0, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wallpaper">
+    <section id="textArea" class="text-area"></section>
+  </main>
+
+  <button id="openSettings" class="open-settings">文字设置</button>
+
+  <aside id="settings" class="settings">
+    <h2>滚动文字设置</h2>
+
+    <label for="textInput">展示文字</label>
+
+    <textarea id="textInput"
+      placeholder="每行文字生成一列，例如：
+独立思考 明辨是非
+自由 鹰击长空
+知行合一 保持清醒"></textarea>
+
+    <p class="hint">
+      每输入一行，就会在屏幕右侧生成一列竖排滚动文字。
+    </p>
+
+    <label for="speedInput">
+      滚动时间（秒，数值越小速度越快）
+    </label>
+
+    <input
+      id="speedInput"
+      type="number"
+      min="5"
+      max="120"
+      value="30"
+    >
+
+    <label for="sizeInput">文字大小（像素）</label>
+
+    <input
+      id="sizeInput"
+      type="number"
+      min="18"
+      max="130"
+      value="58"
+    >
+
+    <label for="colorInput">背景颜色</label>
+
+    <input
+      id="colorInput"
+      type="color"
+      value="#a90000"
+    >
+
+    <div class="buttons">
+      <button id="applyButton">应用并保存</button>
+      <button id="hideButton" class="secondary">隐藏面板</button>
+    </div>
+  </aside>
+
+  <script>
+    const textArea = document.getElementById("textArea");
+    const settings = document.getElementById("settings");
+    const textInput = document.getElementById("textInput");
+    const speedInput = document.getElementById("speedInput");
+    const sizeInput = document.getElementById("sizeInput");
+    const colorInput = document.getElementById("colorInput");
+    const applyButton = document.getElementById("applyButton");
+    const hideButton = document.getElementById("hideButton");
+    const openSettings = document.getElementById("openSettings");
+
+    const defaultText = [
+      "独立思考 明辨是非",
+      "自由 鹰击长空",
+      "知行合一 保持清醒",
+      "雄关漫道真如铁",
+      "而今迈步从头越"
+    ].join("\n");
+
+    function loadSettings() {
+      textInput.value =
+        localStorage.getItem("wallpaperText") || defaultText;
+
+      speedInput.value =
+        localStorage.getItem("wallpaperSpeed") || 30;
+
+      sizeInput.value =
+        localStorage.getItem("wallpaperSize") || 58;
+
+      colorInput.value =
+        localStorage.getItem("wallpaperColor") || "#a90000";
+    }
+
+    function renderWallpaper() {
+      const lines = textInput.value
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean);
+
+      const speed = Math.max(
+        5,
+        Number(speedInput.value) || 30
+      );
+
+      const size = Math.max(
+        18,
+        Number(sizeInput.value) || 58
+      );
+
+      const backgroundColor = colorInput.value;
+
+      textArea.innerHTML = "";
+
+      const finalLines =
+        lines.length > 0 ? lines : ["请输入展示文字"];
+
+      finalLines.forEach((line, index) => {
+        const column = document.createElement("div");
+        column.className = "column";
+
+        const text = document.createElement("div");
+        text.className = "scrolling-text";
+        text.textContent = line;
+
+        const sizeVariation =
+          size * (0.75 + Math.random() * 0.5);
+
+        text.style.fontSize = `${sizeVariation}px`;
+        text.style.animationDuration =
+          `${speed + index * 3}s`;
+        text.style.animationDelay =
+          `${-index * 4}s`;
+        text.style.opacity =
+          `${0.55 + Math.random() * 0.45}`;
+
+        column.appendChild(text);
+        textArea.appendChild(column);
+      });
+
+      document.body.style.backgroundColor =
+        backgroundColor;
+
+      document.querySelector(".wallpaper").style.background =
+        `radial-gradient(
+          circle at 78% 45%,
+          rgba(220, 0, 0, 0.45),
+          transparent 45%
+        ),
+        ${backgroundColor}`;
+    }
+
+    function saveSettings() {
+      localStorage.setItem(
+        "wallpaperText",
+        textInput.value
+      );
+
+      localStorage.setItem(
+        "wallpaperSpeed",
+        speedInput.value
+      );
+
+      localStorage.setItem(
+        "wallpaperSize",
+        sizeInput.value
+      );
+
+      localStorage.setItem(
+        "wallpaperColor",
+        colorInput.value
+      );
+    }
+
+    applyButton.addEventListener("click", () => {
+      saveSettings();
+      renderWallpaper();
+    });
+
+    hideButton.addEventListener("click", () => {
+      settings.classList.add("hidden");
+    });
+
+    openSettings.addEventListener("click", () => {
+      settings.classList.remove("hidden");
+    });
+
+    loadSettings();
+    renderWallpaper();
+  </script>
+</body>
+</html>
