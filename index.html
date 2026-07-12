@@ -85,7 +85,7 @@
       text-orientation: upright;
       white-space: nowrap;
       line-height: 1;
-      letter-spacing: 10px;
+      letter-spacing: 0;
       color: rgba(255, 240, 230, 0.94);
       font-weight: 700;
       text-shadow: 0 0 18px rgba(255, 210, 190, 0.22);
@@ -269,6 +269,22 @@
       value="58"
     >
 
+    <label for="spacingInput">
+      字符间距（像素，可输入负数）
+    </label>
+
+    <input
+      id="spacingInput"
+      type="number"
+      min="-10"
+      max="40"
+      value="0"
+    >
+
+    <p class="hint">
+      0 为正常间距；负数更紧凑；正数会增大字与字之间的距离。
+    </p>
+
     <label for="colorInput">背景颜色</label>
 
     <input
@@ -304,6 +320,7 @@
     const textInput = document.getElementById("textInput");
     const speedInput = document.getElementById("speedInput");
     const sizeInput = document.getElementById("sizeInput");
+    const spacingInput = document.getElementById("spacingInput");
     const colorInput = document.getElementById("colorInput");
     const applyButton = document.getElementById("applyButton");
     const hideButton = document.getElementById("hideButton");
@@ -353,6 +370,11 @@
         localStorage.getItem("wallpaperSize") ||
         58;
 
+      spacingInput.value =
+        params.get("spacing") ??
+        localStorage.getItem("wallpaperSpacing") ??
+        0;
+
       colorInput.value =
         params.get("color") ||
         localStorage.getItem("wallpaperColor") ||
@@ -376,6 +398,11 @@
       );
 
       localStorage.setItem(
+        "wallpaperSpacing",
+        spacingInput.value
+      );
+
+      localStorage.setItem(
         "wallpaperColor",
         colorInput.value
       );
@@ -385,9 +412,12 @@
       根据文字长度与屏幕高度，自动重复内容。
       每一份文字都至少比屏幕稍长，避免中途露出空白。
     */
-    function createRepeatedText(line, fontSize) {
+    function createRepeatedText(line, fontSize, letterSpacing) {
       const cleanLine = line.trim() || "请输入展示文字";
-      const estimatedCharacterHeight = fontSize + 10;
+      const estimatedCharacterHeight = Math.max(
+        1,
+        fontSize + letterSpacing
+      );
       const estimatedLineHeight =
         Math.max(1, cleanLine.length) *
         estimatedCharacterHeight;
@@ -404,7 +434,13 @@
         .join("　") + "　";
     }
 
-    function createColumn(line, index, speed, baseSize) {
+    function createColumn(
+      line,
+      index,
+      speed,
+      baseSize,
+      letterSpacing
+    ) {
       const column = document.createElement("div");
       column.className = "column";
 
@@ -425,7 +461,7 @@
         opacityFactors[index % opacityFactors.length];
 
       const repeatedText =
-        createRepeatedText(line, fontSize);
+        createRepeatedText(line, fontSize, letterSpacing);
 
       /*
         创建两份完全相同的文字。
@@ -436,6 +472,7 @@
         copy.className = "scroll-copy";
         copy.textContent = repeatedText;
         copy.style.fontSize = `${fontSize}px`;
+        copy.style.letterSpacing = `${letterSpacing}px`;
         copy.style.opacity = opacity;
 
         track.appendChild(copy);
@@ -473,17 +510,33 @@
         Math.max(18, Number(sizeInput.value) || 58)
       );
 
+      const spacingValue = Number(spacingInput.value);
+      const letterSpacing = Math.min(
+        40,
+        Math.max(
+          -10,
+          Number.isFinite(spacingValue) ? spacingValue : 0
+        )
+      );
+
       const backgroundColor =
         colorInput.value || "#a90000";
 
       speedInput.value = speed;
       sizeInput.value = size;
+      spacingInput.value = letterSpacing;
 
       textArea.innerHTML = "";
 
       finalLines.forEach((line, index) => {
         textArea.appendChild(
-          createColumn(line, index, speed, size)
+          createColumn(
+            line,
+            index,
+            speed,
+            size,
+            letterSpacing
+          )
         );
       });
 
@@ -503,6 +556,7 @@
       url.searchParams.set("text", textInput.value);
       url.searchParams.set("speed", speedInput.value);
       url.searchParams.set("size", sizeInput.value);
+      url.searchParams.set("spacing", spacingInput.value);
       url.searchParams.set("color", colorInput.value);
 
       return url.toString();
@@ -563,6 +617,7 @@
       textInput.value = defaultText;
       speedInput.value = 30;
       sizeInput.value = 58;
+      spacingInput.value = 0;
       colorInput.value = "#a90000";
 
       saveSettings();
